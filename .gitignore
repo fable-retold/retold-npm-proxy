@@ -1,0 +1,7 @@
+node_modules/
+coverage/
+.nyc_output/
+*.log
+.DS_Store
+# Cached publisher token for the local registry (see core/RetoldNpmProxy-Core-Token.js).
+.retold-npm-proxy-token

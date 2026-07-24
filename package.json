@@ -1,0 +1,41 @@
+{
+	"name": "retold-npm-proxy",
+	"version": "0.0.1",
+	"description": "Command-line control for the Retold local npm registry / pull-through cache: start, stop, status, warehouse, and publish private packages into it (via a direct tarball PUT, so package.json private:true stays intact).",
+	"main": "source/RetoldNpmProxy.cjs",
+	"bin": {
+		"retold-npm-proxy": "./source/cli/RetoldNpmProxy-Run.cjs",
+		"rnp": "./source/cli/RetoldNpmProxy-Run.cjs"
+	},
+	"scripts": {
+		"start": "node source/cli/RetoldNpmProxy-Run.cjs status",
+		"test": "npx mocha -u tdd -R spec test/*_tests.js"
+	},
+	"files": [
+		"source/",
+		"README.md",
+		"LICENSE"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/fable-retold/retold-npm-proxy.git"
+	},
+	"author": "steven@velozo.com",
+	"license": "MIT",
+	"//deps": "Just the pict CLI stack -- this tool drives the registry folder's own npm/docker scripts and talks to Verdaccio over HTTP, so it needs no web-server or registry code of its own.",
+	"dependencies": {
+		"fable": "^3.1.78",
+		"fable-serviceproviderbase": "^3.0.19",
+		"pict": "^1.0.382",
+		"pict-serviceproviderbase": "^1.0.4",
+		"pict-service-commandlineutility": "^1.0.20"
+	},
+	"devDependencies": {
+		"mocha": "^10.2.0"
+	},
+	"mocha": {
+		"reporter": "spec",
+		"timeout": "5000",
+		"ui": "tdd"
+	}
+}
