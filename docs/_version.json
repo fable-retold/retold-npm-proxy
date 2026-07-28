@@ -1,0 +1,7 @@
+{
+	"Name": "retold-npm-proxy",
+	"Version": "0.0.1",
+	"Description": "Command-line control for a local npm registry and pull-through cache (Verdaccio): start/stop/status, warehouse the whole dependency tree for offline installs, and publish private packages into it via a direct tarball PUT. Companion to retold-monorepo-manager.",
+	"GeneratedAt": "2026-07-24T00:00:00.000Z",
+	"GitCommit": ""
+}

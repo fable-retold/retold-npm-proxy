@@ -9,10 +9,13 @@
 	},
 	"scripts": {
 		"start": "node source/cli/RetoldNpmProxy-Run.cjs status",
-		"test": "npx mocha -u tdd -R spec test/*_tests.js"
+		"test": "npx mocha -u tdd -R spec test/*_tests.js",
+		"docs": "npx quack prepare-docs ./docs",
+		"docs-serve": "npx quack docs-serve ./docs"
 	},
 	"files": [
 		"source/",
+		"docs/",
 		"README.md",
 		"LICENSE"
 	],

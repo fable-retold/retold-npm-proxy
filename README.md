@@ -16,6 +16,12 @@ rnp publish <module-dir>       # publish a private retold package into it (see b
 
 (`rnp` and `retold-npm-proxy` are the same bin.)
 
+## Documentation
+
+Full docs with examples live in [`docs/`](docs/) (Overview, Quick Start, How It Works,
+Warehouse & Offline, Publishing Private Packages, Configuration, Docker, and the CLI
+Reference). Build or serve them with `npm run docs` / `npm run docs-serve`.
+
 ## Why `publish` is the point
 
 `npm publish` refuses a package marked `private: true`, and every retold module keeps
