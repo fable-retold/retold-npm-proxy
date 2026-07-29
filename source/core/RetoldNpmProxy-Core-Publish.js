@@ -27,6 +27,27 @@ function encodePackageName(pName)
 	return pName.startsWith('@') ? pName.replace('/', '%2f') : pName;
 }
 
+// `npm pack --json` prints a JSON array, but the package's own prepack/prepare lifecycle
+// script (e.g. a quackage build that shows "Building browserified ...") prints to stdout
+// ahead of it. npm's JSON output has its opening bracket at the start of a line; lifecycle
+// log lines never do (they lead with a timestamp). So if the whole buffer is not already
+// clean JSON, take from the last line-anchored `[` or `{` to the end. Without this, publishing
+// any package that builds on pack throws "Unexpected non-whitespace character after JSON".
+function parsePackJson(pStdout)
+{
+	let tmpText = String(pStdout == null ? '' : pStdout);
+	try { return JSON.parse(tmpText.trim()); }
+	catch (pIgnored)
+	{
+		let tmpStart = -1;
+		let tmpMatcher = /^[[{]/gm;
+		let tmpMatch;
+		while ((tmpMatch = tmpMatcher.exec(tmpText)) !== null) { tmpStart = tmpMatch.index; }
+		if (tmpStart < 0) { throw new Error(`npm pack --json produced no parseable JSON: ${tmpText.slice(0, 200)}`); }
+		return JSON.parse(tmpText.slice(tmpStart).trim());
+	}
+}
+
 // `npm pack --json` -> the tarball path + its shasum/integrity, computed by npm itself.
 function packModule(pModuleDir)
 {
@@ -38,7 +59,7 @@ function packModule(pModuleDir)
 	{
 		throw new Error(`npm pack failed for [${pModuleDir}]: ${(tmpRun.stderr || tmpRun.stdout || '').trim()}`);
 	}
-	let tmpParsed = JSON.parse(tmpRun.stdout);
+	let tmpParsed = parsePackJson(tmpRun.stdout);
 	let tmpInfo = Array.isArray(tmpParsed) ? tmpParsed[0] : tmpParsed;
 	return {
 		TarballPath: libPath.join(tmpTempDir, tmpInfo.filename),
