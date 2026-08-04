@@ -31,7 +31,15 @@ and the same storage on disk.
 
 ## 2. Point npm at it
 
-Add one line to a project's `.npmrc` (or your `~/.npmrc`):
+The quick way, which also points `rnp` itself at the same registry:
+
+```bash
+rnp use local          # or `rnp use http://nas.local:4873` for a shared one
+```
+
+That rewrites the `registry=` line in your `.npmrc` and `RegistryURL` in
+`.retold-npm-proxy.json` for you, then pings it. To do it by hand instead, add one line to a
+project's `.npmrc` (or your `~/.npmrc`):
 
 ```
 registry=http://localhost:4873/
@@ -39,8 +47,8 @@ registry=http://localhost:4873/
 
 Because the retold packages are **unscoped**, this redirects the whole registry: every
 install goes through the proxy, which serves local packages from the warehouse and
-proxies plus caches everything else. Stop the registry and remove that line to fall
-back to vanilla npm.
+proxies plus caches everything else. `rnp use off` (or removing that line) falls back to
+vanilla npm; `rnp where` shows where you point right now.
 
 ## 3. Publish a private package into it
 

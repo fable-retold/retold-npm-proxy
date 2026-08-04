@@ -44,6 +44,69 @@ Start it with:  rnp start        (or `rnp start --docker`)
 
 ---
 
+## `rnp use`
+
+Point npm **and** this tool at a registry (or off) in one move. It rewrites the `registry=`
+line in the `.npmrc` and the `RegistryURL` in `.retold-npm-proxy.json` together, then pings the
+target so you know it answers. This is the client half of the setup, the counterpart to
+`start`/`stop` on the server side. Use it to switch between a laptop-local registry, a shared one
+on a NAS, and plain public npm.
+
+| Option | Meaning |
+|---|---|
+| `--global` | Write `~/.npmrc` and `~/.retold-npm-proxy.json` instead of the monorepo root. |
+
+```bash
+rnp use http://nas.local:4873   # a full URL...
+rnp use nas.local               # ...or a bare host (defaults to :4873)
+rnp use local                   # shortcut for http://localhost:4873
+rnp use off                     # remove the line -> back to public npm
+```
+
+```
+Pointed at http://nas.local:4873
+  npm  /Users/you/Code/retold/.npmrc
+         registry=http://nas.local:4873/
+  rnp  /Users/you/Code/retold/.retold-npm-proxy.json
+         RegistryURL=http://nas.local:4873
+  reachable: yes
+```
+
+The retold packages are unscoped, so one line redirects the whole registry. Mind npm's
+local-prefix rule: the monorepo-root `.npmrc` governs npm run from the root and non-package
+subdirs, but an install run **inside** a module reads that module's own `.npmrc`. Pass `--global`
+to cover those too.
+
+---
+
+## `rnp where`
+
+Show where npm and this tool currently point, and whether the target answers. Read-only.
+
+```bash
+rnp where
+```
+
+```
+npm registry line (.npmrc):
+  /Users/you/Code/retold/.npmrc
+      registry=http://nas.local:4873/
+  /Users/you/.npmrc
+      (no registry line)
+  npm effective, from /Users/you/Code/retold:
+      http://nas.local:4873/
+
+rnp target (.retold-npm-proxy.json RegistryURL):
+  http://nas.local:4873
+  reachable: UP
+```
+
+`npm effective` is what `npm config get registry` resolves from your current directory. It can
+differ from the file line above because of the local-prefix rule: run `rnp where` from inside a
+module and you may see that module's own (or the default public) registry instead.
+
+---
+
 ## `rnp start`
 
 Start the registry. Direct (runs the `verdaccio` installed in the registry folder) by

@@ -59,8 +59,15 @@ manager's `.monorepo-manager.json`). Every field is optional:
 
 ## Pointing npm at the registry
 
-That is npm's config, not `rnp`'s, but it is the other half of the setup. Put one line in
-a project `.npmrc` (or your `~/.npmrc`):
+That is npm's config, not `rnp`'s, but it is the other half of the setup. The easiest way is
+`rnp use`, which writes both the `.npmrc` `registry=` line and this file's `RegistryURL`
+together:
+
+```bash
+rnp use local          # rnp use <url> for a NAS, rnp use off to revert
+```
+
+To do it by hand, put one line in a project `.npmrc` (or your `~/.npmrc`):
 
 ```
 registry=http://localhost:4873/
@@ -68,7 +75,8 @@ registry=http://localhost:4873/
 
 The retold packages are unscoped, so this redirects the whole registry (local-first,
 proxying and caching everything else). The registry ships a `.npmrc.example` you can copy.
-When the registry is stopped, remove or comment that line to return to vanilla npm.
+When the registry is stopped, `rnp use off` (or removing that line) returns you to vanilla
+npm; `rnp where` reports where you currently point.
 
 ## The token cache
 

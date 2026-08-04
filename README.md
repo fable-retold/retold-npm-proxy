@@ -10,6 +10,8 @@ surface over it. Built the same way as `retold-monorepo-manager`
 rnp status                     # is it up? where is it? how big is the warehouse?
 rnp start [--docker]           # start it (direct verdaccio, or docker compose)
 rnp stop  [--docker]           # stop it
+rnp use <url>|local|off        # point npm + rnp at a registry (rewrites .npmrc + config)
+rnp where                      # show where npm and rnp currently point
 rnp warehouse [--root <dir>]   # mirror the whole monorepo dependency closure into storage
 rnp publish <module-dir>       # publish a private retold package into it (see below)
 ```

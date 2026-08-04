@@ -14,10 +14,13 @@ const libHandlerStop = require('./handlers/RetoldNpmProxy-Handler-Stop.js');
 const libHandlerStatus = require('./handlers/RetoldNpmProxy-Handler-Status.js');
 const libHandlerWarehouse = require('./handlers/RetoldNpmProxy-Handler-Warehouse.js');
 const libHandlerPublish = require('./handlers/RetoldNpmProxy-Handler-Publish.js');
+const libHandlerUse = require('./handlers/RetoldNpmProxy-Handler-Use.js');
+const libHandlerWhere = require('./handlers/RetoldNpmProxy-Handler-Where.js');
 
 // Shared across commands.
 const OPTION_REGISTRY_DIR = { Name: '--registry-dir <path>', Description: 'Path to the registry folder (default: auto-discover registry/config.yaml).', Default: undefined };
 const OPTION_URL = { Name: '--url <url>', Description: 'Registry URL (default: http://localhost:4873).', Default: undefined };
+const OPTION_GLOBAL = { Name: '--global', Description: 'Write to ~/.npmrc and ~/.retold-npm-proxy.json instead of the monorepo root.' };
 
 const CommandMap =
 [
@@ -76,6 +79,20 @@ const CommandMap =
 			{ Name: '--tag <tag>', Description: 'dist-tag to publish under (default: latest).' }
 		],
 		Handler: libHandlerPublish
+	},
+	{
+		Keyword: 'use',
+		Description: 'Point npm and this tool at a registry: rnp use <url> | local | off. Rewrites the .npmrc registry line and .retold-npm-proxy.json RegistryURL together.',
+		Transport: 'native',
+		Options: [ OPTION_GLOBAL, OPTION_REGISTRY_DIR ],
+		Handler: libHandlerUse
+	},
+	{
+		Keyword: 'where',
+		Description: 'Show where npm and this tool currently point: the .npmrc registry line, the rnp RegistryURL, the effective npm registry, and whether it answers.',
+		Transport: 'native',
+		Options: [ OPTION_REGISTRY_DIR ],
+		Handler: libHandlerWhere
 	}
 ];
 

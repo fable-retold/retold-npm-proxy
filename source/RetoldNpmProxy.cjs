@@ -10,5 +10,6 @@ module.exports =
 		Warehouse: require('./core/RetoldNpmProxy-Core-Warehouse.js'),
 		Publish: require('./core/RetoldNpmProxy-Core-Publish.js'),
 		Token: require('./core/RetoldNpmProxy-Core-Token.js'),
+		Environment: require('./core/RetoldNpmProxy-Core-Environment.js'),
 		CommandMap: require('./cli/RetoldNpmProxy-CommandMap.cjs')
 	};

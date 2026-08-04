@@ -25,16 +25,37 @@ function findRegistryUpward(pStartDir)
 	}
 }
 
+// Walk up from a start dir reading the first `.retold-npm-proxy.json` found. The framework
+// gathers this file too (for the `configure` explanation command), but resolving URL/dir here
+// as well is what makes a project's RegistryURL/RegistryDirectory actually take effect in every
+// command (status/warehouse/publish/use/where), not only when passed as a --flag.
+function gatheredConfig(pStartDir)
+{
+	let tmpDir = libPath.resolve(pStartDir || process.cwd());
+	while (true)
+	{
+		let tmpCandidate = libPath.join(tmpDir, '.retold-npm-proxy.json');
+		if (libFS.existsSync(tmpCandidate))
+		{
+			try { return JSON.parse(libFS.readFileSync(tmpCandidate, 'utf8')) || {}; }
+			catch (pError) { return {}; }
+		}
+		let tmpParent = libPath.dirname(tmpDir);
+		if (tmpParent === tmpDir) { return {}; }
+		tmpDir = tmpParent;
+	}
+}
+
 /**
- * Resolve the registry directory. Priority: explicit option/config -> env
- * RETOLD_REGISTRY_DIR -> walk up from cwd -> the copy shipped next to this monorepo.
+ * Resolve the registry directory. Priority: explicit option -> env RETOLD_REGISTRY_DIR ->
+ * config-file RegistryDirectory -> walk up from cwd -> the copy shipped next to this monorepo.
  * @param {object} pOptions
  * @returns {string}
  */
 function resolveRegistryDir(pOptions)
 {
 	let tmpOptions = pOptions || {};
-	let tmpExplicit = tmpOptions.registryDir || tmpOptions.RegistryDirectory || process.env.RETOLD_REGISTRY_DIR || '';
+	let tmpExplicit = tmpOptions.registryDir || tmpOptions.RegistryDirectory || process.env.RETOLD_REGISTRY_DIR || gatheredConfig(process.cwd()).RegistryDirectory || '';
 	if (tmpExplicit) { return libPath.resolve(tmpExplicit); }
 
 	let tmpFound = findRegistryUpward(process.cwd());
@@ -48,7 +69,7 @@ function resolveRegistryDir(pOptions)
 function registryURL(pOptions)
 {
 	let tmpOptions = pOptions || {};
-	return String(tmpOptions.url || tmpOptions.RegistryURL || _DEFAULT_URL).replace(/\/+$/, '');
+	return String(tmpOptions.url || tmpOptions.RegistryURL || gatheredConfig(process.cwd()).RegistryURL || _DEFAULT_URL).replace(/\/+$/, '');
 }
 
 // The monorepo root is the directory that holds the registry folder.
@@ -177,4 +198,4 @@ function stop(pOptions)
 	return { Mode: 'direct', Stopped: true, Message: `stopped pid(s) ${tmpPIDs.join(', ')} on :${tmpPort}` };
 }
 
-module.exports = { resolveRegistryDir, registryURL, monorepoRoot, ping, storageStats, verdaccioBinary, start, stop };
+module.exports = { resolveRegistryDir, registryURL, gatheredConfig, monorepoRoot, ping, storageStats, verdaccioBinary, start, stop };

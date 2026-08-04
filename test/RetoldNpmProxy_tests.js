@@ -67,4 +67,76 @@ suite('retold-npm-proxy', () =>
 		libAssert.strictEqual(libProxy.Publish.encodePackageName('retold-deploy-tool'), 'retold-deploy-tool');
 		libAssert.strictEqual(libProxy.Publish.encodePackageName('@retold/foundation'), '@retold%2ffoundation');
 	});
+
+	test('the command map includes the new use and where commands', () =>
+	{
+		let tmpKeywords = libProxy.CommandMap.map((pEntry) => pEntry.Keyword);
+		[ 'use', 'where' ].forEach((pKeyword) =>
+		{
+			libAssert.ok(tmpKeywords.indexOf(pKeyword) >= 0, `command [${pKeyword}] should be registered`);
+			libAssert.ok(typeof libProxy.CommandMap.find((pE) => pE.Keyword === pKeyword).Handler === 'function', `command [${pKeyword}] needs a handler`);
+		});
+	});
+
+	test('normalizeTarget resolves local, off, full URLs, and bare hosts', () =>
+	{
+		let tmpEnv = libProxy.Environment;
+		libAssert.deepStrictEqual(tmpEnv.normalizeTarget('local'), { Off: false, URL: 'http://localhost:4873' });
+		libAssert.deepStrictEqual(tmpEnv.normalizeTarget('off'), { Off: true, URL: '' });
+		libAssert.deepStrictEqual(tmpEnv.normalizeTarget('public'), { Off: true, URL: '' });
+		libAssert.strictEqual(tmpEnv.normalizeTarget('http://nas.local:4873/').URL, 'http://nas.local:4873');
+		libAssert.strictEqual(tmpEnv.normalizeTarget('nas.local').URL, 'http://nas.local:4873');
+		libAssert.strictEqual(tmpEnv.normalizeTarget('nas.local:9000').URL, 'http://nas.local:9000');
+	});
+
+	test('rewriteNpmrc sets, replaces, and clears the registry line while keeping the rest', () =>
+	{
+		let tmpEnv = libProxy.Environment;
+		let tmpSet = { Off: false, URL: 'http://nas.local:4873' };
+		let tmpOff = { Off: true, URL: '' };
+
+		libAssert.strictEqual(tmpEnv.rewriteNpmrc('package-lock=false\n', tmpSet), 'package-lock=false\nregistry=http://nas.local:4873/\n');
+		libAssert.strictEqual(tmpEnv.rewriteNpmrc('registry=http://localhost:4873/\npackage-lock=false\n', tmpSet), 'registry=http://nas.local:4873/\npackage-lock=false\n');
+		libAssert.strictEqual(tmpEnv.rewriteNpmrc('registry=http://localhost:4873/\npackage-lock=false\n', tmpOff), 'package-lock=false\n');
+		libAssert.strictEqual(tmpEnv.rewriteNpmrc('registry=http://localhost:4873/\n', tmpOff), '');
+	});
+
+	test('rewriteConfig sets and clears RegistryURL without disturbing other keys', () =>
+	{
+		let tmpEnv = libProxy.Environment;
+		libAssert.deepStrictEqual(
+			tmpEnv.rewriteConfig({ PublisherUser: 'retold-local' }, { Off: false, URL: 'http://nas.local:4873' }),
+			{ PublisherUser: 'retold-local', RegistryURL: 'http://nas.local:4873' });
+		libAssert.deepStrictEqual(
+			tmpEnv.rewriteConfig({ PublisherUser: 'retold-local', RegistryURL: 'http://old:4873' }, { Off: true, URL: '' }),
+			{ PublisherUser: 'retold-local' });
+	});
+
+	test('a .retold-npm-proxy.json RegistryURL is read by the registry resolver (the config-file path)', () =>
+	{
+		let tmpTmp = libFS.mkdtempSync(libPath.join(libOS.tmpdir(), 'rnp-cfg-'));
+		libFS.writeFileSync(libPath.join(tmpTmp, '.retold-npm-proxy.json'), JSON.stringify({ RegistryURL: 'http://nas.local:4873' }));
+		let tmpConfig = libProxy.Registry.gatheredConfig(tmpTmp);
+		libAssert.strictEqual(tmpConfig.RegistryURL, 'http://nas.local:4873', 'gatheredConfig should read the config file');
+		libFS.rmSync(tmpTmp, { recursive: true, force: true });
+	});
+
+	test('apply writes both files and readState reads them back (and off clears them)', () =>
+	{
+		let tmpEnv = libProxy.Environment;
+		let tmpTmp = libFS.mkdtempSync(libPath.join(libOS.tmpdir(), 'rnp-use-'));
+		libFS.writeFileSync(libPath.join(tmpTmp, '.npmrc'), 'package-lock=false\n');
+
+		tmpEnv.apply(tmpTmp, { Off: false, URL: 'http://nas.local:4873' });
+		let tmpState = tmpEnv.readState(tmpTmp);
+		libAssert.strictEqual(tmpState.NpmrcRegistry, 'http://nas.local:4873/');
+		libAssert.strictEqual(tmpState.ConfigURL, 'http://nas.local:4873');
+		libAssert.ok(libFS.readFileSync(libPath.join(tmpTmp, '.npmrc'), 'utf8').indexOf('package-lock=false') >= 0, 'other .npmrc lines survive');
+
+		tmpEnv.apply(tmpTmp, { Off: true, URL: '' });
+		let tmpOffState = tmpEnv.readState(tmpTmp);
+		libAssert.strictEqual(tmpOffState.NpmrcRegistry, '', 'off clears the registry line');
+		libAssert.strictEqual(tmpOffState.ConfigURL, '', 'off clears RegistryURL');
+		libFS.rmSync(tmpTmp, { recursive: true, force: true });
+	});
 });
