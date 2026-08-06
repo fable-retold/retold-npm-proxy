@@ -191,6 +191,97 @@ running, and exits non-zero if any tarball fails. See [Warehouse & Offline](ware
 
 ---
 
+## `rnp timemachine`
+
+Mirror **every published version** of every package the monorepo references — not just the
+one a lockfile pins right now (that is `warehouse`). It reads each package's packument through
+the proxy (which lists every version and its tarball), then GETs every one of those tarballs so
+they land in storage. After a full run, an old checkout whose `package.json` ranges resolve to
+*older* versions installs straight from the proxy — and the proxy becomes the source of record,
+so a new store can be seeded from it without touching public npm again.
+
+Only **direct** references are expanded (the names that appear in a `package.json`); a version's
+own transitive deps are pulled on demand the first time something actually installs it.
+
+It is a **big** pull — hundreds of packages, tens of thousands of versions, tens of GB. Run
+`--plan` first to preview the scope, and let the resume file make it safely interruptible.
+
+| Option | Meaning |
+|---|---|
+| `--plan` | Count packages and versions and stop — preview the scope without fetching anything. |
+| `--stable-only` | Skip prerelease versions (anything with a `-`: `-beta.1`, `-rc.2`, `-canary.4`, …). |
+| `--git-history` | Also harvest dependency names from **every `package.json` across git history** — every repo, all refs, including nested example apps — so a dep only an old commit referenced (since removed or renamed) is captured too. Bigger. |
+| `--root <path>` | Root to scan for `package.json` files. Default: the monorepo root. |
+| `--concurrency <n>` | Parallel fetches (default `8`). |
+| `--resume <path>` | Progress file that lets a re-run skip already-cached tarballs. Default `<root>/.rnp-timemachine-progress`. |
+
+Preview first — no fetching, just the scope:
+
+```bash
+rnp timemachine --plan
+```
+
+```
+Planning every referenced package version under /Users/you/Code/retold
+  registry: http://localhost:4873
+  reading metadata 376/376
+
+Packages referenced: 376
+Versions (tarballs): 65029
+No public metadata:  2 (private/unpublished -- skipped): fable3, orator6
+
+That is the scope. Run without --plan to pull them all (resumable; big -- expect tens of GB and a long run).
+```
+
+Then pull it — here against a shared NAS registry, harvesting git history too:
+
+```bash
+rnp timemachine --git-history --url http://nas.local:4873 --root ~/Code/retold --concurrency 16
+```
+
+```
+Time-machining every referenced package version under /Users/you/Code/retold
+  registry: http://nas.local:4873
+  scanning git history 147/147 repos
+  reading metadata 437/437
+  tarballs 69601/69601  (ok 69588, fail 13)
+  FAIL  HTTP 404  http://nas.local:4873/@types/node/-/node-9.4.2.tgz
+  ...
+
+Packages referenced: 437  (+61 from git history)
+Versions (tarballs): 69601
+No public metadata:  5 (private/unpublished -- skipped): fable3, orator2, orator6, pict-section-claudetransformer, retold-data
+Cached:              69588
+Failed:              13
+  HTTP 404  http://nas.local:4873/@types/node/-/node-9.4.2.tgz
+  HTTP 404  http://nas.local:4873/firebase/-/firebase-0.0.0.tgz
+  ...
+(full list also written to <resume-file>.failures)
+```
+
+**Resumable.** As each tarball lands it is appended to the progress file; a re-run skips
+everything already recorded and re-attempts only what is left — so an interruption (or a
+transient drop) costs nothing but the retry. The file records *successes* only, which means
+running the same command again is also how you retry the failures.
+
+**Failures are expected — and logged.** Each failing tarball prints live as `FAIL <reason>
+<url>`, and every failure of the run is written fresh to `<resume-file>.failures`. Almost all are
+`HTTP 404`: a version the packument still lists but whose tarball npm has since unpublished —
+gone from npm entirely, so nothing to recover. A `terminated` reason is different: the connection
+dropped mid-transfer (a big tarball over a slow link), and a re-run usually pulls it cleanly. Any
+failure sets a non-zero exit code.
+
+**No public metadata.** Packages whose packument the proxy cannot fetch — your own
+`private: true` modules, or `npm:`-aliased names like `fable3` / `orator6` — are listed and
+skipped; there is nothing to time-machine for them (the alias targets, e.g. `fable`, are already
+covered under their real names).
+
+`timemachine` is the all-versions sibling of [`rnp warehouse`](#rnp-warehouse), which mirrors
+only the versions the lockfiles pin today. See [Warehouse & Offline](warehouse.md) for the
+offline-cache story.
+
+---
+
 ## `rnp publish`
 
 Publish a private retold package into the local registry, preserving its
