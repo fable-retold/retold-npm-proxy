@@ -11,5 +11,6 @@ module.exports =
 		Publish: require('./core/RetoldNpmProxy-Core-Publish.js'),
 		Token: require('./core/RetoldNpmProxy-Core-Token.js'),
 		Environment: require('./core/RetoldNpmProxy-Core-Environment.js'),
+		TimeMachine: require('./core/RetoldNpmProxy-Core-TimeMachine.js'),
 		CommandMap: require('./cli/RetoldNpmProxy-CommandMap.cjs')
 	};

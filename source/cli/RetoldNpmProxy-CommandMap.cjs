@@ -16,6 +16,7 @@ const libHandlerWarehouse = require('./handlers/RetoldNpmProxy-Handler-Warehouse
 const libHandlerPublish = require('./handlers/RetoldNpmProxy-Handler-Publish.js');
 const libHandlerUse = require('./handlers/RetoldNpmProxy-Handler-Use.js');
 const libHandlerWhere = require('./handlers/RetoldNpmProxy-Handler-Where.js');
+const libHandlerTimeMachine = require('./handlers/RetoldNpmProxy-Handler-TimeMachine.js');
 
 // Shared across commands.
 const OPTION_REGISTRY_DIR = { Name: '--registry-dir <path>', Description: 'Path to the registry folder (default: auto-discover registry/config.yaml).', Default: undefined };
@@ -93,6 +94,23 @@ const CommandMap =
 		Transport: 'native',
 		Options: [ OPTION_REGISTRY_DIR ],
 		Handler: libHandlerWhere
+	},
+	{
+		Keyword: 'timemachine',
+		Description: 'Mirror EVERY published version of every package referenced in the monorepo package.json files (not just lockfile-pinned), so old checkouts install from the proxy. Big -- run with --plan first to preview the scope.',
+		Transport: 'native',
+		Options:
+		[
+			OPTION_URL,
+			OPTION_REGISTRY_DIR,
+			{ Name: '--plan', Description: 'Count packages and versions without fetching (preview the scope).' },
+			{ Name: '--stable-only', Description: 'Skip prerelease versions (alpha/beta/rc).' },
+			{ Name: '--git-history', Description: 'Also harvest dependency names from every package.json across git history (incl. example apps) -- catches removed/renamed deps. Bigger.' },
+			{ Name: '--root <path>', Description: 'Root to scan for package.json (default: the monorepo root).' },
+			{ Name: '--concurrency <n>', Description: 'Parallel fetches (default 8).' },
+			{ Name: '--resume <path>', Description: 'Progress file to skip already-cached tarballs (default: <root>/.rnp-timemachine-progress).' }
+		],
+		Handler: libHandlerTimeMachine
 	}
 ];
 

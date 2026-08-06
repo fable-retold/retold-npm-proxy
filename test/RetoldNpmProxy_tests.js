@@ -10,6 +10,7 @@ const libAssert = require('assert');
 const libFS = require('fs');
 const libOS = require('os');
 const libPath = require('path');
+const libCP = require('child_process');
 
 const libProxy = require('../source/RetoldNpmProxy.cjs');
 
@@ -137,6 +138,58 @@ suite('retold-npm-proxy', () =>
 		let tmpOffState = tmpEnv.readState(tmpTmp);
 		libAssert.strictEqual(tmpOffState.NpmrcRegistry, '', 'off clears the registry line');
 		libAssert.strictEqual(tmpOffState.ConfigURL, '', 'off clears RegistryURL');
+		libFS.rmSync(tmpTmp, { recursive: true, force: true });
+	});
+
+	test('the command map includes the timemachine command', () =>
+	{
+		let tmpEntry = libProxy.CommandMap.find((pE) => pE.Keyword === 'timemachine');
+		libAssert.ok(tmpEntry, '`timemachine` should be registered');
+		libAssert.ok(typeof tmpEntry.Handler === 'function', '`timemachine` needs a handler');
+	});
+
+	test('timemachine collectPackageNames unions every dependency section across package.json, skipping node_modules', () =>
+	{
+		let tmpTmp = libFS.mkdtempSync(libPath.join(libOS.tmpdir(), 'rnp-tm-'));
+		libFS.writeFileSync(libPath.join(tmpTmp, 'package.json'), JSON.stringify({ dependencies: { fable: '^1' }, devDependencies: { mocha: '^10' } }));
+		libFS.mkdirSync(libPath.join(tmpTmp, 'sub'));
+		libFS.writeFileSync(libPath.join(tmpTmp, 'sub', 'package.json'), JSON.stringify({ dependencies: { fable: '^2', pict: '^3' }, peerDependencies: { orator: '*' }, optionalDependencies: { fsevents: '*' } }));
+		libFS.mkdirSync(libPath.join(tmpTmp, 'node_modules', 'junk'), { recursive: true });
+		libFS.writeFileSync(libPath.join(tmpTmp, 'node_modules', 'junk', 'package.json'), JSON.stringify({ dependencies: { 'should-be-skipped': '^1' } }));
+
+		let tmpNames = libProxy.TimeMachine.collectPackageNames(tmpTmp);
+		libAssert.deepStrictEqual(tmpNames, [ 'fable', 'fsevents', 'mocha', 'orator', 'pict' ]);
+		libFS.rmSync(tmpTmp, { recursive: true, force: true });
+	});
+
+	test('timemachine tarballsFromPackument returns every version tarball; stable-only drops prereleases', () =>
+	{
+		let tmpPackument = { versions: {
+			'1.0.0': { dist: { tarball: 'https://registry.npmjs.org/x/-/x-1.0.0.tgz' } },
+			'1.1.0-beta.1': { dist: { tarball: 'https://registry.npmjs.org/x/-/x-1.1.0-beta.1.tgz' } },
+			'2.0.0': { dist: { tarball: 'https://registry.npmjs.org/x/-/x-2.0.0.tgz' } }
+		} };
+		libAssert.strictEqual(libProxy.TimeMachine.tarballsFromPackument(tmpPackument, {}).length, 3);
+		libAssert.strictEqual(libProxy.TimeMachine.tarballsFromPackument(tmpPackument, { stableOnly: true }).length, 2);
+	});
+
+	test('timemachine git-history harvest captures deps a later commit removed, and nested example-app deps', () =>
+	{
+		let tmpTmp = libFS.mkdtempSync(libPath.join(libOS.tmpdir(), 'rnp-gh-'));
+		let fGit = (pArgs) => libCP.execSync('git ' + pArgs, { cwd: tmpTmp, stdio: 'pipe' });
+		fGit('init -q'); fGit('config user.email t@t.test'); fGit('config user.name test'); fGit('config commit.gpgsign false');
+		libFS.writeFileSync(libPath.join(tmpTmp, 'package.json'), JSON.stringify({ dependencies: { 'old-dep': '^1' } }));
+		fGit('add -A'); fGit('commit -qm v1');
+		libFS.mkdirSync(libPath.join(tmpTmp, 'example'));
+		libFS.writeFileSync(libPath.join(tmpTmp, 'example', 'package.json'), JSON.stringify({ dependencies: { 'example-only-dep': '^1' } }));
+		libFS.writeFileSync(libPath.join(tmpTmp, 'package.json'), JSON.stringify({ dependencies: { 'new-dep': '^2' } }));   // old-dep removed
+		fGit('add -A'); fGit('commit -qm v2');
+
+		let tmpNames = new Set();
+		libProxy.TimeMachine.collectPackageNamesFromGitHistory(tmpTmp, tmpNames);
+		libAssert.ok(tmpNames.has('old-dep'), 'a dep removed in a later commit is still harvested from history');
+		libAssert.ok(tmpNames.has('new-dep'), 'the current dep is harvested');
+		libAssert.ok(tmpNames.has('example-only-dep'), 'a nested example-app dep is harvested too');
 		libFS.rmSync(tmpTmp, { recursive: true, force: true });
 	});
 });

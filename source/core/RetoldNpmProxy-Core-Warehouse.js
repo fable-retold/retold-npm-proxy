@@ -119,4 +119,4 @@ async function warehouse(pOptions)
 	return { Lockfiles: tmpLocks.length, Unique: tmpTarballs.length, OK: tmpOK, Fail: tmpFail, Failed: tmpFailed };
 }
 
-module.exports = { warehouse, findLockfiles, collectTarballs };
+module.exports = { warehouse, warehouseOne, findLockfiles, collectTarballs };
